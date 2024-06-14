@@ -1,0 +1,72 @@
+# Non-Metric Multidimensional Scaling (NMDS) 
+
+# Load libraries
+
+library(vegan) 
+library(tidyverse)
+
+
+# Load data ------------------------------------------------------------
+
+
+# Crear la matriz de comunidad
+community_matrix <- fish %>%
+  group_by(year, region, reef, transect, species) %>%
+  summarise(quantity = sum(quantity), .groups = 'drop') %>%
+  group_by(region, reef, species) %>%
+  summarise(quantity = round(mean(quantity), 1), .groups = 'drop') %>%
+  pivot_wider(names_from = "species", values_from = "quantity") %>%
+  as.data.frame() # Convertir a data frame para asegurar la manipulación de filas y columnas
+
+# Nombrar las filas como los arrecifes
+rownames(community_matrix) <- community_matrix$reef
+community_matrix$reef <- NULL # Eliminar la columna reef
+
+# Ausencias verdaderas  
+community_matrix[is.na(community_matrix)] <- 0 
+
+# Calcular el NMDS
+rev_NMDS <- metaMDS(community_matrix [,2:27], # Matriz de arrecife por especie
+                    k = 2, # A estas dimensiones escalamos el NMDS (Reduced dimensions)
+                    trymax = 1000) # Número de iteraciones que se van a realizar (cambiar si es necesario)   
+
+# Plotear el stressplot
+stressplot(rev_NMDS)
+
+# Plotear los resultados de NMDS
+plot(rev_NMDS)
+
+# Extraer la información de 'region'
+region <- community_matrix$region
+
+# Plot personalizado del NMDS
+ordiplot(rev_NMDS, type = "n")
+orditorp(rev_NMDS, display = "species", col = "red", air = 2, pch = "+")
+orditorp(rev_NMDS, display = "sites", col = c(rep("firebrick", 2), rep("darkgreen", 1), rep("blue", 13), rep("orange", 14)), air = 3, cex = 0.3)
+ordihull(rev_NMDS, groups = region, draw = "polygon", label = TRUE, fill = "white", col = c("firebrick", "darkgreen", "lightblue", "gold"), alpha = 0.25)
+# ordilabel(rev_NMDS, labels = region, fill = "white", border = NA)
+
+
+
+print(unique(region))
+
+# Convertir todos los valores a numéricos
+community_matrix[] <- lapply(community_matrix, as.numeric)
+
+# Calcular diversidad usando índice de Shannon
+diversity_indices <- diversity(as.matrix(community_matrix), index = "shannon")
+print(diversity_indices)
+
+# Estandarizar y calcular la matriz de distancia
+community_std <- wisconsin(community_matrix ^ 0.25)
+community_dist <- vegdist(community_std, 'bray')
+
+# Ejecutar PERMANOVA con adonis2
+adonis2_result <- adonis2(community_dist ~ region, data = community_matrix, method = 'bray', permutations = 999)
+print(adonis2_result)
+
+
+# Evaluar la dispersión de la beta diversidad
+community_perm <- betadisper(community_dist, community_matrix$region)
+plot(community_perm)
+anova(community_perm)
