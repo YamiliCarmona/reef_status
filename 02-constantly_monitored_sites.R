@@ -5,8 +5,12 @@ library(ggplot2)
 
 # Load data
 
-ltem  <- readRDS("data/fish_datagr_prod-by-species-all-sites.RDS") |> 
-  janitor::clean_names()
+# ltem  <- readRDS("data/fish_datagr_prod-by-species-all-sites.RDS") |> 
+#   janitor::clean_names()
+
+
+ltem  <- readRDS( "data/fish_datagr_prod-by-species-all-sites-integrada.RDS")
+  
 
 regions <- c("Loreto", "Corredor", "La Paz", "Cabo Pulmo")
 
@@ -63,7 +67,9 @@ print(site_counts_by_year_region)
 
 final_data <- final_data %>%
   rename(total_years = total_years.x) %>%
-  select(-total_years.y)
+  select(-total_years.y)|> 
+  filter(habitat %in% c("BLOQUES", "PARED"))
+
 
 # Print the structure of final_data
 str(final_data)
@@ -72,4 +78,4 @@ sites <- final_data |>
   distinct(region, reef, depth2, total_years)
   
 # Save the file with saveRDS
-# saveRDS(final_data, "data/standardized_ltem_sites.RDS")
+saveRDS(final_data, "data/standardized_ltem_sites.RDS")

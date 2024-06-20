@@ -7,25 +7,29 @@ library(vegan)       # For ecological community analysis
 
 # Load data ------------------------------------------------------------
 
-# sppdata <- readRDS("data/fish_datagr_prod-by-species-all-sites.RDS") |> 
+# sppdata <- readRDS("data/fish_datagr_prod-by-species-all-sites.RDS") |>
 #   janitor::clean_names()
 
-# ltem <- readRDS("data/standardized_ltem_sites.RDS") 
+ltem <- readRDS("data/standardized_ltem_sites.RDS") |> 
+  filter(habitat %in% c("BLOQUES", "PARED"))
 
-sppdata <- readRDS("data/fish_datagr_prod-by-species-all-sites-integrada.RDS")
+# sppdata <- readRDS("data/fish_datagr_prod-by-species-all-sites-integrada.RDS")
+
+
+
 
 # Summarize for each transect -----------------------------------------
 
-data_prod_brut <- sppdata |> 
+data_prod_brut <- ltem |> 
   # Sum for each transect
-  group_by(year, region, reef, depth2, transect, diet) %>%
+  group_by(year, region, reef, depth2, transect, family, species) %>%
   mutate(
     biom = sum(biom) / area,    # Biomass (kg ha^−1)
     prod = sum(prod) / area,    # Production (g d^−1 ha^−1)
     productivity = (prod / biom) * 100) %>%
   ungroup() |> 
   # Mean for each site
-  group_by(year, region, reef, transect, diet) %>%
+  group_by(year, region, reef, transect, family, species) %>%
   mutate(
     biom = mean(biom),
     prod = mean(prod),
@@ -78,17 +82,9 @@ fish <- management |>
   filter(year >= 2010) |> 
   filter(region %in% c("Loreto", "Corredor", "La Paz", "Cabo Pulmo")) |> 
   # filter(family == "Scaridae")
-  filter(family %in% c("Serranidae", "Lutjanidae", "Scaridae")) |>
+  filter(family %in% c("Serranidae", "Lutjanidae", "Scaridae", "Labridae", "Pomacentridae", 
+                       "Haemulidae", "Acanthuridae", "Kyphosidae")) |>
   # filter(family %in% c("Carcharhinidae", "Caranx", "Sphyrnidae")) |> 
-  # filter(genus %in% c("Mycteroperca", "Ginglymostomatidae", "Epinephelus", "Hoplopagrus", "Lutjanus", "Scarus", "Caulolatilus", "Paranthias" )) |> 
-  # filter(species %in% c("Mycteroperca rosacea", "Mycteroperca jordani",
-  #                       "Caranx caballus", "Caranx caninus", "Caranx sexfasciatus",
-  #                       "Epinephelus acanthistius", "Epinephelus itajara",
-  #                       "Hoplopagrus guntheri", "Mycteroperca xenarcha",
-  #                       "Lutjanus argentiventris", "Lutjanus novemfasciatus",
-  #                       "Scarus ghobban", "Scarus compressus", "Scarus perico",
-  #                       "Caulolatilus princeps", "Lutjanus guttatus",
-  #                       "Caulolatilus affinis", "Paranthias colonus")) |> 
   mutate(region = factor(region, levels = c("Loreto", "Corredor", "La Paz", "Cabo Pulmo"))) |> 
   mutate(
     a_ord = as.numeric(a),
@@ -103,12 +99,16 @@ fish <- management |>
 
 str(fish)
 
-unique(fish$species)
+unique(fish$family)
+
+feed <- fish %>%
+  distinct(family, species, diet, feeding_type, functional_name) %>%
+  count(diet)
 
 # Process community data -----------------------------------------------
 
 community_data <- fish |> 
-  group_by(year, mpa, protection_level, region, reef, habitat, transect, depth2, diet, family) |>
+  group_by(year, mpa, protection_level, region, reef, habitat, transect, depth2, diet, family, species) |>
   summarise(
     abundance = sum(quantity, na.rm = TRUE),
     richness = n_distinct(species),
@@ -116,7 +116,7 @@ community_data <- fish |>
     prod = mean(prod), 
     productivity = mean(productivity),
     size = mean(size, na.rm = TRUE)) |> 
-  group_by(year, region, reef, transect, family) |>
+  group_by(year, region, reef, transect, diet, family, species) |>
   summarise(
     abundance = mean(abundance),
     richness = sum(richness),

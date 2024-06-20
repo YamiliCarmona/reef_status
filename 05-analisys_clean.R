@@ -12,18 +12,18 @@ library(ggvegan) # make vegan plots easier
 
 
 # load data ------
-# 06-community_data 
+# 03-community_data 
 
 
 
 community_data <- fish |> 
-  group_by(year, mpa, protection_level, region, reef, habitat, transect, depth2, species) |>
+  group_by(year, mpa, protection_level, region, reef, habitat, transect, depth2, family, species) |>
   summarise(abundance = sum(quantity, na.rm = TRUE),
             richness = n_distinct(species),
             biomass = sum(biomass, na.rm = TRUE),
             prod = mean(prod), 
             productivity = mean(productivity))|> 
-  group_by(year, region, reef, transect) |>
+  group_by(year, region, reef, transect, habitat, family, species) |>
   summarise(total_abund = mean(abundance),
             total_richness = sum(richness),
             total_bm = mean(biomass, na.rm = TRUE),
@@ -31,20 +31,26 @@ community_data <- fish |>
             productivity = mean(productivity))
 
 
+community_data <- community_data %>%
+  filter(total_prod != 0, total_abund != 0, total_richness != 0, total_bm != 0)
+community_data <- community_data %>%
+  mutate(nino2014 = ifelse(year < 2014, "pre", "post"))
+
+
 # Entire community analyses --------------------------------------------------------------
 # Productivity ---------
 prod_gam <- brm(total_prod ~ s(year),
       data = community_data,
       family = Gamma(link = 'log'),
-      iter = 10000,
-      warmup = 2000,
-      thin = 5,
+      iter = 2000,          # Reducir el número de iteraciones
+      warmup = 1000,        # Reducir el número de iteraciones de calentamiento
+      thin = 2,             # Ajustar el thinning
       seed = 123,
-      save_pars = save_pars(all = TRUE),
-      control = list(adapt_delta = 0.999))
+      save_pars = save_pars(all = TRUE),  # No guardar todos los parámetros
+      control = list(adapt_delta = 0.999))  
 
 
-# saveRDS(prod_gam, 'data/Productivity_gam.rds')
+saveRDS(prod_gam, 'data/Productivity_gam.rds')
 # prod_gam <- readRDS('data/Productivity_gam.rds')
 
 # Gráfico del término suave
@@ -105,13 +111,13 @@ prod_gam_loo # only 2 values are between 0.5 and 0.7, none are greater than that
 bm_gam <- brm(total_bm ~ s(year), 
               data = community_data,
               family = Gamma(link = 'log'),
-              iter = 10000,
-              warmup = 2000,
-              thin = 5,
+              iter = 2000,          # Reducir el número de iteraciones
+              warmup = 1000,        # Reducir el número de iteraciones de calentamiento
+              thin = 2,             # Ajustar el thinning
               seed = 123,
               save_pars = save_pars(all = TRUE),
               control = list(adapt_delta = 0.999))
-# saveRDS(bm_gam, 'data/Biomass_gam.rds')
+saveRDS(bm_gam, 'data/Biomass_gam.rds')
 #bm_gam <- readRDS('../Model_outputs/Biomass_gam.rds')
 
 # check model diagnostics
@@ -167,14 +173,14 @@ community_data$total_abund <- as.integer(community_data$total_abund)
 abun_gam <- brm(total_abund ~ s(year), 
                 data = community_data,
                 family = negbinomial(link = 'log'),
-                iter = 10000,
-                warmup = 2000,
-                thin = 5,
+                iter = 2000,          # Reducir el número de iteraciones
+                warmup = 1000,        # Reducir el número de iteraciones de calentamiento
+                thin = 2,    
                 seed = 123,
                 save_pars = save_pars(all = TRUE),
                 control = list(adapt_delta = 0.99))
 
-# saveRDS(abun_gam, 'data/Abundance_gam.rds')
+saveRDS(abun_gam, 'data/Abundance_gam.rds')
 #abun_gam <- readRDS('../Model_outputs/Abundance_gam.rds')
 
 # check model diagnostics
@@ -233,9 +239,9 @@ abun_gam_loo # only 1 value is between 0.5 and 0.7, none are greater than that
 rich_gam <- brm(total_richness ~ s(year), 
                 data = community_data,
                 family = negbinomial(link = 'log'),
-                iter = 10000,
-                warmup = 2000,
-                thin = 5,
+                iter = 2000,          # Reducir el número de iteraciones
+                warmup = 1000,        # Reducir el número de iteraciones de calentamiento
+                thin = 2,    
                 seed = 123,
                 save_pars = save_pars(all = TRUE),
                 control = list(adapt_delta = 0.99))

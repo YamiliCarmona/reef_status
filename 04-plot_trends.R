@@ -3,7 +3,7 @@
 
 # Plotting mean size over years for each region 
 community_data |> 
-  group_by(year, region, family) %>%
+  group_by(year, region, diet) %>%
   summarise(size = mean(size), .groups = 'drop') |>
   ggplot(aes(x = year, y = size)) +
   geom_line()+
@@ -14,7 +14,7 @@ community_data |>
     x = "Year",
     y =  "Size"
   ) +
-  facet_grid(region ~ family) +
+  facet_grid(region ~ diet) +
   theme_minimal() +
   theme(legend.position = "none")
 
