@@ -75,7 +75,7 @@ final_data <- final_data %>%
 str(final_data)
 
 sites <- final_data |> 
-  distinct(region, reef, depth2, total_years)
+  distinct(region, reef, depth2, habitat, total_years)
   
 # Save the file with saveRDS
 saveRDS(final_data, "data/standardized_ltem_sites.RDS")
